@@ -52,6 +52,38 @@ class GestionUsuarios():
         except mysql.connector.Error as e:
             return {"Exito": False, "Mensaje": f"Hubo un error al consultar: {e}"}
 
+
+            #Update (Actualizar): Modificar los datos de un usuario existente.
+
+   def actualizar_datos(self, nuevo_nombre, nuevo_correo, nuevo_telefono, nombre_buscar, correo_buscar):
+        cursor = self.conexion(dictionary=True)
+
+        try:
+            actu = """UPDATE usuarios SET nombre = %s, correo = %s, telefono = %s WHERE nombre = %s AND correo = %s"""
+            
+            # El orden de la tupla: primero los 3 valores que se van a actualizar (SET) 
+            # y luego los valores de búsqueda (WHERE)
+            cursor.execute(actu, (nuevo_nombre, nuevo_correo, nuevo_telefono, nombre_buscar, correo_buscar))
+
+            self.conexion_bd.commit()
+            
+            if cursor.rowcount == 0:
+                cursor.close()
+                return {"Exito": False, "Mensaje": "No se encontró ningún usuario con esos datos para actualizar."}
+
+            cursor.close()
+            return {"Exito": True, "Mensaje": "Datos actualizados correctamente."}
+
+        except mysql.connector.Error as e:
+            cursor.close()
+            return {"Exito": False, "Mensaje": f"Error al actualizar los datos: {e}"}
+
+
+
+
+
+
+           
     
         
 
