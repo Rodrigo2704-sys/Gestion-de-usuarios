@@ -10,10 +10,7 @@ class GestionUsuarios():
         database="usuarios"
         )
 
-        #Crear (Create): Una función para registrar un nuevo usuario pidiendo su nombre, correo y edad, validando que el correo no se duplique.
-
-       #Leer (Read): Funciones para consultar la información, ya sea ver la lista completa de todos los usuarios registrados o buscar a uno en específico por su ID o correo.
-
+    
  def conectar(self):
         return self.conexion
 
@@ -38,7 +35,22 @@ class GestionUsuarios():
         except mysql.connector.Error as e:
             return {"Exito": False, "Mensaje": "Hubo un error al intentar registrarse."}
 
+         #Leer (Read): Funciones para consultar la información, ya sea ver la lista completa de todos los usuarios registrados o buscar a uno en específico por su ID o correo.
 
+    def Consultar_por_nombre(self, nombre):
+        cursor = self.conexion(dictionary=True)
+        try:
+            sql = "SELECT * FROM usuarios WHERE nombre = %s"
+            cursor.execute(sql, (nombre,))
+            resultado = cursor.fetchone()
+
+            if not resultado:
+                return {"Exito": False, "Mensaje": "El usuario no se encuentra registrado"}
+
+            return {"Exito": True, "Mensaje": f"Usuario encontrado: {resultado}"}
+
+        except mysql.connector.Error as e:
+            return {"Exito": False, "Mensaje": f"Hubo un error al consultar: {e}"}
 
     
         
