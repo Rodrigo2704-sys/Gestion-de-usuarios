@@ -37,7 +37,7 @@ def login(datos: EntradaLogin, db: Session = Depends(get_db)):
     })
     
     return {
-        "access_token": access_token,
+        "access_token": crear_token_acceso,
         "token_type": "bearer",
         "rol": usuario.rol,
         "nombre": usuario.nombre
