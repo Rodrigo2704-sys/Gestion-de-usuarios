@@ -7,6 +7,11 @@ from pydantic import BaseModel, EmailStr
 
 # 1. Los datos base que comparten las demás clases
 
+class EntradaLogin(BaseModel):#Base model es como idnependiente
+                              #Basemodel hereda lo del padre y le suma
+
+    correo: EmailStr
+    password: str
 
 
 class DatosUsuario(BaseModel):
@@ -32,9 +37,3 @@ class ActualizarUsuario(BaseModel):
 
     class Config:
         from_attributes = True
-
-class EntradaLogin(BaseModel):#Base model es como idnependiente
-                              #Basemodel hereda lo del padre y le suma
-
-    correo: EmailStr
-    password: str

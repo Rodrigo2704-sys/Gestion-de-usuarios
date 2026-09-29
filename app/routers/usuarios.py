@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.core.security import verificar_contraseña , crear_token_acceso
 
 # Importamos tus esquemas de Pydantic
-from app.schemas.usuarios import DatosUsuario , EntradaRegistro , SalidaUsuario
+from app.schemas.usuarios import EntradaLogin, DatosUsuario , EntradaRegistro , SalidaUsuario , ActualizarUsuario
 # (Nota: Si tienes un esquema específico para login o update parcial, 
 # asegúrate de importarlo aquí. Usaremos EntradaRegistro o adaptaremos según tus clases).
 
@@ -25,26 +25,24 @@ from app.crud.usuarios import (
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
 
-@router.post("/")  
+@router.post("/login")  
 def login(datos: EntradaLogin, db: Session = Depends(get_db)):
     usuario = iniciar_sesion(db, email=datos.correo, contraseña_ingresada=datos.password)
     if not usuario:
         raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
     
-    access_token = crear_token_acceso(data={
+    access_token = crear_token_acceso(datos={
         "sub": usuario.correo,
-        "rol": usuario.rol
     })
     
     return {
-        "access_token": crear_token_acceso,
+        "access_token": access_token,
         "token_type": "bearer",
-        "rol": usuario.rol,
         "nombre": usuario.nombre
     }
 
 # 2. REGISTRAR USUARIO
-@router.post("/", response_model=SalidaUsuario, status_code=status.HTTP_201_CREATED)
+@router.post("registrar", response_model=SalidaUsuario, status_code=status.HTTP_201_CREATED)
 def crear_nuevo_usuario(datos: EntradaRegistro, db: Session = Depends(get_db)):
     # Verificamos si el correo ya existe
     usuario_existente = obtener_usuario_por_correo(db, correo=datos.correo)

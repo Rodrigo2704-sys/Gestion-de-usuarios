@@ -14,7 +14,7 @@ def iniciar_sesion(db: Session, email: str, contraseña_ingresada: str):
 
     # 2. Segunda condición: Verificar la contraseña con la función segura
     # 'usuario.password' es el hash largo que está guardado en MySQL
-    contrasena_valida = verify_password(contrasena_ingresada, usuario.password)
+    contrasena_valida = verificar_contraseña(contraseña_ingresada, usuario.password)
     
     if not contrasena_valida:
         return None # La contraseña es incorrecta
