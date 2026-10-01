@@ -1,7 +1,8 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError  # Import para capturar errores de BD
+from sqlalchemy.exc import SQLAlchemyError 
+from fastapi.security import OAuth2PasswordRequestForm  # Import para capturar errores de BD
 
 # Importamos la dependencia para la base de datos y la seguridad
 from app.core.database import get_db 
@@ -26,8 +27,13 @@ router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
 # 1. INICIAR SESIÓN (Pública)
 @router.post("/login")  
-def login(datos: EntradaLogin, db: Session = Depends(get_db)):
-    usuario = iniciar_sesion(db, email=datos.correo, contraseña_ingresada=datos.password)
+# 2. Reemplazamos 'datos: EntradaLogin' por 'form_data: OAuth2PasswordRequestForm = Depends()'
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    
+    # 3. Swagger mapea el cuadro de texto del usuario en 'form_data.username'.
+    # Pasamos eso al parámetro 'email' de tu función lógica:
+    usuario = iniciar_sesion(db, email=form_data.username, contraseña_ingresada=form_data.password)
+    
     if not usuario:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
@@ -73,6 +79,25 @@ def crear_nuevo_usuario(datos: EntradaRegistro, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ocurrió un error inesperado en la base de datos al registrar el usuario"
         )
+
+
+
+# 7. BUSCAR USUARIO POR CORREO (Protegida con Token)
+# Se consulta en el navegador como: /usuarios/buscar/correo?email=ejemplo@gmail.com
+@router.get("/buscar/correo", response_model=SalidaUsuario)
+def obtener_usuario_por_correo_endpoint(
+    email: str, # Parámetro query que enviará el JavaScript
+    db: Session = Depends(get_db),
+    email_usuario: str = Depends(verificar_token) # Token de seguridad activo
+):
+    usuario = obtener_usuario_por_correo(db, correo=email)
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No se encontró ningún usuario con ese correo electrónico"
+        )
+    return usuario
+
 
 
 # 3. OBTENER TODOS LOS USUARIOS (Protegida con Token)

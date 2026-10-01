@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, DECIMAL, ForeignKey, DateTime
 from app.core.database import Base
+from datetime import datetime
 
 class planesModel(Base):
     __tablename__ = "planes"
@@ -7,8 +8,8 @@ class planesModel(Base):
     id=Column(Integer,primary_key=True,index=True,autoincrement=True)
     tipo=Column(String(100),nullable=False)
     precio=Column(DECIMAL(10,2),nullable=False)
-    duracion=Colum(Integer,nullable=False)
-    estado=Colum(String(500),defaul='activo')
+    duracion=Column(Integer,nullable=False)
+    estado=Column(String(500),default='activo')
 
 class membresiasModel(Base):
     __tablename__="membresias_usuario"

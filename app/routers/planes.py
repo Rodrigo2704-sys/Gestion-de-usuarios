@@ -6,7 +6,7 @@ from app.core.database  import get_db
 from app.core.security import verificar_token
 from app.schemas.planes import DatosPlan, SalidaPlan, AsignarMembresia, SalidaMembresia
 
-from app.crud.planes import(
+from app.planes.planes import(
     crear_plan,
     consultar_planes,
     asignar_membresia,

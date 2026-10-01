@@ -12,7 +12,7 @@ load_dotenv()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Autenticación por Bearer Token apuntando al login
-autenticacion = OAuth2PasswordBearer(tokenUrl="/api/login")
+autenticacion = OAuth2PasswordBearer(tokenUrl="/usuarios/login")
 
 # Variables de entorno
 SECRET_KEY = os.getenv("SECRET_KEY", "Rodrepotesal")

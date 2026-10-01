@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Gimnasio</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f7f6; color: #333; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
+        .seccion { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 20px; }
+        h3 { margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #2c3e50; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        button { padding: 8px 12px; cursor: pointer; border: none; border-radius: 4px; margin-right: 5px; font-weight: bold; }
+        .btn-buscar { background-color: #3498db; color: white; }
+        .btn-guardar { background-color: #2ecc71; color: white; padding: 10px 15px; }
+        .btn-logout { background-color: #e74c3c; color: white; }
+        .form-grupo { margin-bottom: 15px; }
+        .form-grupo label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-grupo input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .flex-container { display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. BARRA SUPERIOR (Saludo y Logout) -->
+    <div class="header">
+        <!-- El JS inyectará el nombre del administrador aquí -->
+        <h2>¡Bienvenido, <span id="nombre-bienvenida">Cargando...</span>!</h2>
+        <!-- Botón para borrar las llaves de sesión y salir -->
+        <button id="btn-logout" class="btn-logout" onclick="localStorage.clear(); window.location.href='login.html';">Cerrar Sesión</button>
+    </div>
+
+    <!-- 2. BARRA DE BÚSQUEDA POR CORREO -->
+    <div class="seccion">
+        <h3>Filtro de Búsqueda</h3>
+        <div class="flex-container">
+            <!-- El JS leerá esta casilla para el endpoint de consulta por correo -->
+            <input type="email" id="input-busqueda-correo" placeholder="Escribe el correo exacto del cliente...">
+            <button class="btn-buscar" onclick="buscarClienteEspecificoPorCorreo()">Buscar por Correo</button>
+            <button onclick="mostrarTablaDeUsuarios()">Mostrar Todos</button>
+        </div>
+    </div>
+
+    <!-- 3. TABLA DEL CRUD (Listado Dinámico) -->
+    <div class="seccion">
+        <h3>Clientes Registrados</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre Completo</th>
+                    <th>Correo Electrónico</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <!-- El JS destruye este texto y dibuja las filas reales de la Base de Datos -->
+            <tbody id="cuerpo-tabla-usuarios">
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #777;">Conectando con el servidor de FastAPI...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 4. FORMULARIO DE EDICIÓN -->
+    <div class="seccion">
+        <h3>Actualizar Información del Cliente</h3>
+        <div id="formulario-edicion">
+            <!-- Input oculto indispensable para conservar el ID al ejecutar la API 5 (PUT) -->
+            <input type="hidden" id="edit-id">
+
+            <div class="form-grupo">
+                <label for="edit-nombre">Nombre Completo:</label>
+                <input type="text" id="edit-nombre" placeholder="Nombre completo del usuario">
+            </div>
+
+            <div class="form-grupo">
+                <label for="edit-correo">Correo Electrónico:</label>
+                <input type="email" id="edit-correo" placeholder="correo@ejemplo.com">
+            </div>
+
+            <button class="btn-guardar" onclick="ejecutarModificacionUsuario()">Guardar Cambios</button>
+        </div>
+    </div>
+
+    <!-- 🏛 Rose de estafeta: Orden de llamadas JavaScript antes de cerrar el documento -->
+    <script src="js/api.js"></script>
+    <script src="js/usuarios.js"></script>
+</body>
+</html>

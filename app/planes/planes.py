@@ -2,11 +2,11 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 # Importación de Modelos de SQLAlchemy
-from app.models.planes import planesModel, membresiasModel, DatosPlan
-from app.models.usuario import UsuarioModel  # Ajusta la ruta a tu modelo de Usuario
+from app.models.planes import planesModel, membresiasModel
+from app.models.usuarios import UsuarioModel  # Ajusta la ruta a tu modelo de Usuario
 
 # Importación de Schemas de Pydantic
-from app.schemas.membresia import EntradaPlan, AsignarMembresia
+from app.schemas.planes import  AsignarMembresia, DatosPlan
 
 
 def crear_plan(db: Session, plan: DatosPlan):

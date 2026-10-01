@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import usuarios
+from app.routers import planes  # <--- 1. IMPORTA TU NUEVO ROUTER DE PLANES
 
 app = FastAPI(
     title="Mi Backend Junior", 
@@ -19,8 +20,8 @@ app.add_middleware(
 )
 
 # Conectamos los routers
-
 app.include_router(usuarios.router)
+app.include_router(planes.router)  # <--- 2. REGISTRAR EL ROUTER EN LA APP
 
 @app.get("/", tags=["Raíz"])
 def read_root():
