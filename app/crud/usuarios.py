@@ -3,14 +3,14 @@ from app.models.usuarios import UsuarioModel
 from app.schemas.usuarios import EntradaRegistro
 from app.core.security import hash_password
 from app.core.security import verificar_contraseña
+from sqlalchemy.orm import joinedload
 
 def iniciar_sesion(db: Session, email: str, contraseña_ingresada: str):
     # 1. Primera condición: Buscar al usuario por el correo
-    usuario = db.query(UsuarioModel).filter(UsuarioModel.correo == email).first()
-    
+    usuario = db.query(UsuarioModel).options(joinedload(UsuarioModel.rol)).filter(UsuarioModel.correo == email).first()    
     # Si el correo no existe en la base de datos, retornamos False (o None)
     if not usuario:
-        return None
+         return None
 
     # 2. Segunda condición: Verificar la contraseña con la función segura
     # 'usuario.password' es el hash largo que está guardado en MySQL
@@ -22,22 +22,37 @@ def iniciar_sesion(db: Session, email: str, contraseña_ingresada: str):
     # Si pasa ambas validaciones, el login es exitoso y devolvemos el usuario
     return usuario
 
-
-
 def registrar_usuario(db: Session, usuario: EntradaRegistro):
     contrasena_encriptada = hash_password(usuario.password)
 
     db_usuario = UsuarioModel(
         nombre=usuario.nombre,
         correo=usuario.correo,
-        password=contrasena_encriptada
+        password=contrasena_encriptada,
+        rol_id=2  # Cliente por defecto
     )
 
     db.add(db_usuario)
     db.commit()
     db.refresh(db_usuario)
-    return db_usuario 
+    _ = db_usuario.rol  # Fuerza la carga de la relación para el Pydantic schema
+    return db_usuario
 
+
+def actualizar_rol_usuario_crud(db: Session, usuario_id: int, nuevo_rol_id: int):
+    # Solo permitimos 1 (Admin) o 2 (Cliente)
+    if nuevo_rol_id not in [1, 2]:
+        return None
+
+    usuario = db.query(UsuarioModel).filter(UsuarioModel.id == usuario_id).first()
+    if not usuario:
+        return None
+    
+    usuario.rol_id = nuevo_rol_id
+    db.commit()
+    db.refresh(usuario)
+    _ = usuario.rol
+    return usuario
 
 def obtener_usuario_por_correo(db: Session, correo: str):
     return db.query(UsuarioModel).filter(UsuarioModel.correo == correo).first()

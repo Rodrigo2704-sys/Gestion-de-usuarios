@@ -2,7 +2,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError 
-from fastapi.security import OAuth2PasswordRequestForm  # Import para capturar errores de BD
+from fastapi.security import OAuth2PasswordRequestForm
+from app.main import limiter  # O la referencia donde inicializaste el limiter
+from fastapi import Request  # Import para capturar errores de BD
 
 # Importamos la dependencia para la base de datos y la seguridad
 from app.core.database import get_db 
@@ -10,6 +12,7 @@ from app.core.security import verificar_contraseña, crear_token_acceso, verific
 
 # Importamos tus esquemas de Pydantic
 from app.schemas.usuarios import EntradaLogin, DatosUsuario, EntradaRegistro, SalidaUsuario, ActualizarUsuario
+from app.models.usuarios import UsuarioModel
 
 # Importamos las funciones del CRUD
 from app.crud.usuarios import (
@@ -19,19 +22,44 @@ from app.crud.usuarios import (
     obtener_usuario_por_id,
     obtener_todos_los_usuarios,
     actualizar_usuario,
-    eliminar_usuario
+    eliminar_usuario,
+    actualizar_rol_usuario_crud
 )
+
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
 
-# 1. INICIAR SESIÓN (Pública)
-@router.post("/login")  
-# 2. Reemplazamos 'datos: EntradaLogin' por 'form_data: OAuth2PasswordRequestForm = Depends()'
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+
+def obtener_usuario_actual(email: str = Depends(verificar_token), db: Session = Depends(get_db)):
+    # Buscas al usuario en la base de datos usando el correo que viene del token
+    usuario = db.query(UsuarioModel).filter(UsuarioModel.correo == email).first()
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no encontrado o inactivo"
+        )
+    return usuario
+
+
+def solo_administradores(
+    usuario_actual = Depends(obtener_usuario_actual)
+):
+    """
+    Guard de seguridad estricto para rutas de administración (RBAC).
+    """
+    if usuario_actual.rol_id != 1:  # 1 = Administrador
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso denegado. Se requieren privilegios de Administrador."
+        )
+    return usuario_actual
+
+
+@router.post("/login")
+@limiter.limit("5/minute")
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(get_db)):
     
-    # 3. Swagger mapea el cuadro de texto del usuario en 'form_data.username'.
-    # Pasamos eso al parámetro 'email' de tu función lógica:
     usuario = iniciar_sesion(db, email=form_data.username, contraseña_ingresada=form_data.password)
     
     if not usuario:
@@ -40,21 +68,24 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Correo o contraseña incorrectos"
         )
     
+    nombre_rol = usuario.rol.nombre
+    
     access_token = crear_token_acceso(datos={
         "sub": usuario.correo,
+        "rol": nombre_rol
     })
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "nombre": usuario.nombre
+        "nombre": usuario.nombre,
+        "rol": nombre_rol
     }
 
 
 # 2. REGISTRAR USUARIO (Pública)
-@router.post("/registrar", response_model=SalidaUsuario, status_code=status.HTTP_201_CREATED) # <--- Corregido: le faltaba la barra '/' en "/registrar"
-def crear_nuevo_usuario(datos: EntradaRegistro, db: Session = Depends(get_db)):
-    # 1. Verificamos regla de negocio (si el correo ya existe)
+@router.post("/registrar", response_model=SalidaUsuario, status_code=status.HTTP_201_CREATED)
+def crear_nuevo_usuario(datos: EntradaRegistro, db = Depends(get_db)):
     usuario_existente = obtener_usuario_por_correo(db, correo=datos.correo)
     if usuario_existente:
         raise HTTPException(
@@ -62,7 +93,6 @@ def crear_nuevo_usuario(datos: EntradaRegistro, db: Session = Depends(get_db)):
             detail="El correo ya se encuentra registrado"
         )
 
-    # 2. Control de fallos de servidor/BD con try-except
     try:
         nuevo_usuario = registrar_usuario(db, usuario=datos)
         
@@ -81,14 +111,42 @@ def crear_nuevo_usuario(datos: EntradaRegistro, db: Session = Depends(get_db)):
         )
 
 
+# --- ENDPOINT PARA CAMBIAR ROL (Protegido con RBAC Estricto) ---
+@router.patch("/{usuario_id}/cambiar-rol", response_model=SalidaUsuario)
+def cambiar_rol_endpoint(
+    usuario_id: int, 
+    nuevo_rol_id: int, 
+    db = Depends(get_db),
+    admin_actual = Depends(solo_administradores)
+):
+    if admin_actual.id == usuario_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Operación no permitida. No puedes cambiar tu propio rol de administrador."
+        )
 
-# 7. BUSCAR USUARIO POR CORREO (Protegida con Token)
-# Se consulta en el navegador como: /usuarios/buscar/correo?email=ejemplo@gmail.com
+    if nuevo_rol_id not in [1, 2]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rol inválido. Solo se permite 1 (Admin) o 2 (Cliente)."
+        )
+
+    usuario_actualizado = actualizar_rol_usuario_crud(db, usuario_id, nuevo_rol_id)
+    
+    if not usuario_actualizado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado."
+        )
+        
+    return usuario_actualizado
+
+
 @router.get("/buscar/correo", response_model=SalidaUsuario)
 def obtener_usuario_por_correo_endpoint(
-    email: str, # Parámetro query que enviará el JavaScript
-    db: Session = Depends(get_db),
-    email_usuario: str = Depends(verificar_token) # Token de seguridad activo
+    email: str, 
+    db = Depends(get_db),
+    admin_actual = Depends(solo_administradores)  # 🔒 Cambiado a solo_administradores
 ):
     usuario = obtener_usuario_por_correo(db, correo=email)
     if not usuario:
@@ -98,26 +156,23 @@ def obtener_usuario_por_correo_endpoint(
         )
     return usuario
 
-
-
-# 3. OBTENER TODOS LOS USUARIOS (Protegida con Token)
 @router.get("/", response_model=List[SalidaUsuario])
 def listar_usuarios(
     skip: int = 0, 
     limit: int = 100, 
-    db: Session = Depends(get_db),
-    email_usuario: str = Depends(verificar_token) # <--- Token de seguridad
+    db = Depends(get_db),
+    admin_actual = Depends(solo_administradores)  # 🔒 Cambiado a solo_administradores
 ):
     usuarios = obtener_todos_los_usuarios(db, skip=skip, limit=limit)
     return usuarios
 
 
-# 4. OBTENER USUARIO POR ID (Protegida con Token)
+# 4. OBTENER USUARIO POR ID (Protegida)
 @router.get("/{usuario_id}", response_model=SalidaUsuario)
 def obtener_usuario_por_id_endpoint(
     usuario_id: int, 
-    db: Session = Depends(get_db),
-    email_usuario: str = Depends(verificar_token) # <--- Token de seguridad
+    db = Depends(get_db),
+    usuario_actual = Depends(obtener_usuario_actual)
 ):
     usuario = obtener_usuario_por_id(db, usuario_id=usuario_id)
     if not usuario:
@@ -128,15 +183,20 @@ def obtener_usuario_por_id_endpoint(
     return usuario
 
 
-# 5. ACTUALIZAR USUARIO (Protegida con Token)
-@router.put("/{usuario_id}", response_model=SalidaUsuario)
+@router.patch("/{usuario_id}", response_model=SalidaUsuario)
 def modificar_usuario(
     usuario_id: int, 
     datos: ActualizarUsuario, 
-    db: Session = Depends(get_db),
-    email_usuario: str = Depends(verificar_token) # <--- Token de seguridad
+    db = Depends(get_db),
+    usuario_actual = Depends(obtener_usuario_actual)
 ):
-    # Pydantic v2: model_dump(exclude_unset=True) / Pydantic v1: dict(exclude_unset=True)
+    # 🔒 Validación de propiedad o rol de administrador
+    if usuario_actual.rol_id != 1 and usuario_actual.id != usuario_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para modificar los datos de otro usuario."
+        )
+
     datos_dict = datos.model_dump(exclude_unset=True) if hasattr(datos, "model_dump") else datos.dict(exclude_unset=True)
     
     if not datos_dict:
@@ -145,30 +205,21 @@ def modificar_usuario(
             detail="No se enviaron datos para actualizar."
         )
     
-    try:
-        usuario_actualizado = actualizar_usuario(db=db, usuario_id=usuario_id, datos_actualizacion=datos_dict)
-        
-        if not usuario_actualizado:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Usuario no encontrado."
-            )
-            
-        return usuario_actualizado
-
-    except SQLAlchemyError:
+    usuario_actualizado = actualizar_usuario(db=db, usuario_id=usuario_id, datos_actualizacion=datos_dict)
+    if not usuario_actualizado:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error al actualizar los datos en la base de datos."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado."
         )
+        
+    return usuario_actualizado
 
-
-# 6. ELIMINAR USUARIO (Protegida con Token)
+# 6. ELIMINAR USUARIO (Protegida)
 @router.delete("/{usuario_id}")
 def borrar_usuario(
     usuario_id: int, 
-    db: Session = Depends(get_db),
-    email_usuario: str = Depends(verificar_token) # <--- Token de seguridad
+    db = Depends(get_db),
+    admin_actual = Depends(solo_administradores)
 ):
     try:
         usuario_eliminado = eliminar_usuario(db, usuario_id=usuario_id)

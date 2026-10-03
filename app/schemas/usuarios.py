@@ -4,32 +4,38 @@
 #La contraseña no porque entre hijas no se heredan
 from typing import Optional
 from pydantic import BaseModel, EmailStr
-
-# 1. Los datos base que comparten las demás clases
-
-class EntradaLogin(BaseModel):#Base model indnependiente
-                             
-
-    correo: EmailStr
-    password: str
-
-
-class DatosUsuario(BaseModel):
-    nombre: str
-    correo: EmailStr
-
-# 2. Lo que RECIBIMOS cuando alguien llena el formulario de registro
-class EntradaRegistro(DatosUsuario):
-    password: str
-
-# 3. Lo que DEVOLVEMOS como respuesta a la aplicación (Sin contraseña)
-class SalidaUsuario(DatosUsuario):
+from pydantic import Field
+# 1. Esquema del Rol (debe ir ARRIBA para que SalidaUsuario lo reconozca)
+class RolSalida(BaseModel):
     id: int
+    nombre: str
 
     class Config:
         from_attributes = True
 
-# 4. Esquema exclusivo para actualizar (todos opcionales gracias a Optional)
+# 2. Datos base del usuario
+class DatosUsuario(BaseModel):
+    nombre: str
+    correo: EmailStr
+
+class EntradaLogin(BaseModel):
+    correo: EmailStr
+    password: str
+
+# 3. Datos que entran en el Registro
+class EntradaRegistro(DatosUsuario):
+    password: str = Field(..., min_length=8, description="La contraseña debe tener al menos 8 caracteres")
+
+# 4. Datos que salen en la respuesta (SalidaUsuario)
+class SalidaUsuario(DatosUsuario):
+    id: int
+    rol_id: int
+    rol: Optional[RolSalida] = None  # <--- Definición limpia y segura
+
+    class Config:
+        from_attributes = True
+
+# 5. Esquema para Actualizaciones
 class ActualizarUsuario(BaseModel):
     nombre: Optional[str] = None
     correo: Optional[EmailStr] = None

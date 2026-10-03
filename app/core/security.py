@@ -1,23 +1,18 @@
+# app/security.py
 from datetime import datetime, timezone, timedelta
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 import jwt
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
+# Importamos las variables ya validadas desde config.py
+from app.core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Configuración de cifrado con bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Autenticación por Bearer Token apuntando al login
 autenticacion = OAuth2PasswordBearer(tokenUrl="/usuarios/login")
-
-# Variables de entorno
-SECRET_KEY = os.getenv("SECRET_KEY", "Rodrepotesal")
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 
 def hash_password(password: str):
