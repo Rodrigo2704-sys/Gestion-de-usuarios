@@ -84,7 +84,9 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db
 
 
 # 2. REGISTRAR USUARIO (Pública)
+
 @router.post("/registrar", response_model=SalidaUsuario, status_code=status.HTTP_201_CREATED)
+@limiter.limit("3/minute")
 def crear_nuevo_usuario(datos: EntradaRegistro, db = Depends(get_db)):
     usuario_existente = obtener_usuario_por_correo(db, correo=datos.correo)
     if usuario_existente:
@@ -196,6 +198,8 @@ def modificar_usuario(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para modificar los datos de otro usuario."
         )
+
+        #Esta linea es para agarrar solo  los datos que el  cliente decidio actualizar.
 
     datos_dict = datos.model_dump(exclude_unset=True) if hasattr(datos, "model_dump") else datos.dict(exclude_unset=True)
     

@@ -1,0 +1,3 @@
+-Codigo de verificacion
+-el frontend de registrarse
+-Cerrar sesion

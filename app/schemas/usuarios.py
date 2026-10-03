@@ -5,13 +5,7 @@
 from typing import Optional
 from pydantic import BaseModel, EmailStr
 from pydantic import Field
-# 1. Esquema del Rol (debe ir ARRIBA para que SalidaUsuario lo reconozca)
-class RolSalida(BaseModel):
-    id: int
-    nombre: str
 
-    class Config:
-        from_attributes = True
 
 # 2. Datos base del usuario
 class DatosUsuario(BaseModel):
@@ -30,7 +24,7 @@ class EntradaRegistro(DatosUsuario):
 class SalidaUsuario(DatosUsuario):
     id: int
     rol_id: int
-    rol: Optional[RolSalida] = None  # <--- Definición limpia y segura
+    rol: Optional[RolSalida] = None  # <--- le trae las columnas de la tabla rol o si sale algo mal por defecto le dara none
 
     class Config:
         from_attributes = True

@@ -11,7 +11,7 @@ from app.core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 # Configuración de cifrado con bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Autenticación por Bearer Token apuntando al login
+# Esa línea es el conector entre OpenAPI/Swagger y tu ruta de Login, y sirve para que FastAPI sepa cómo extraer el token de la cabecera HTTP de cada petición entrante.
 autenticacion = OAuth2PasswordBearer(tokenUrl="/usuarios/login")
 
 

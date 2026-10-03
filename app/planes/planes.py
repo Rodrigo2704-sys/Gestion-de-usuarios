@@ -61,6 +61,30 @@ def asignar_membresia(db: Session, datos: AsignarMembresia):
     db.refresh(asignacion)
     return asignacion
 
+def actualizar_membresia(db: Session, usuario_id: int, datos: ActualizarMembresia):
+    
+    usuario_membresia = db.query(membresiasModel).filter(membresiasModel.usuario_id == usuario_id).first()
+    
+    if not usuario_membresia:
+        return None
+    
+    # Aplicar las modificaciones si el cliente las envió
+    if datos.plan_id is not None:
+        usuario_membresia.plan_id = datos.plan_id
+
+    #Si el cliente envio un estado, se le pone ese estado.
+        
+    if datos.estado is not None:
+        usuario_membresia.estado = datos.estado
+
+    # 3. Guardamos los cambios en la base de datos
+    db.commit()
+    
+    #  Se le pasa el objeto a refrescar dentro de los paréntesis
+    db.refresh(usuario_membresia)
+    
+    return usuario_membresia
+
 
 def membresia_usuario(db: Session, usuario_id: int):
     # Buscamos la membresía vigente ('activa') del usuario
